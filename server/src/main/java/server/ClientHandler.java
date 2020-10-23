@@ -25,7 +25,7 @@ public class ClientHandler {
 
             new Thread(() -> {
                 try {
-                    socket.setSoTimeout(5000);
+                    socket.setSoTimeout(120000);
                     //цикл аутентификации
                     while (true) {
                         String str = in.readUTF();
@@ -79,6 +79,25 @@ public class ClientHandler {
                                 sendMsg("/end");
                                 break;
                             }
+
+
+                            // смена ника
+                            if (str.startsWith("/chnick ")){
+                                String[] token = str.split("\\s");
+                                if (token.length != 2) {
+                                    continue;
+                                }
+                                String newNick = server.getAuthService().changeNickname(login, token[1]);
+                                if (newNick != null){
+                                    server.serverMessage(this, "сменил ник на", newNick);
+                                    nickname = newNick;
+                                    server.broadcastClientList();
+
+                                } else{
+                                    server.serverMessage(this, "Такой никнейм уже занят");
+                                }
+                            }
+
                             if (str.startsWith("/w")) {
                                 String[] token = str.split("\\s", 3); // разделяет на 3 элемента: /w, получатель и текст сообщения
                                 if (token.length < 3){

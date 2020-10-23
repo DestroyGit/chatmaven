@@ -104,14 +104,14 @@ public class Controller implements Initializable {
                     while (true) {
                         String str = in.readUTF();
 
-                        if (str.startsWith("/regok ")) {
+                        if (str.startsWith("/regok")) {
                             regController.addMessageTextArea("Регистрация прошла успешно");
                         }
-                        if (str.startsWith("/regno ")) {
+                        if (str.startsWith("/regno")) {
                             regController.addMessageTextArea("Регистрация не прошла");
                         }
 
-                        if (str.startsWith("/authok ")) {
+                        if (str.startsWith("/authok")) {
                             nickname = str.split("\\s")[1];
                             setAuthenticated(true);
                             break;

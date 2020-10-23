@@ -12,7 +12,7 @@ public class Server {
 
     public Server() {
         clients = new CopyOnWriteArrayList<>();
-        authService = new SimpleAuthService();
+        authService = new SQLiteAuthService();
         ServerSocket server = null;
         Socket socket = null;
         final int PORT = 8189;
@@ -62,6 +62,18 @@ public class Server {
             }
         }
         sender.sendMsg(String.format("Server: client %s is not found", reciever)); // если такой отправитель не найден, отправляем сообщение отправителю
+    }
+
+    public void serverMessage(ClientHandler sender, String msg, String newNick){
+        sender.sendMsg(msg);
+        String message = String.format("[ %s ]: %s [ %s ]", sender.getNickname(), msg, newNick);
+        for (ClientHandler c : clients) {
+            c.sendMsg(message);
+        }
+    }
+
+    public void serverMessage(ClientHandler sender, String msg) {
+        sender.sendMsg(msg);
     }
 
     public void subscribe(ClientHandler clientHandler) {
