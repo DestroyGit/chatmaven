@@ -1,0 +1,56 @@
+package server;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SQLiteAuthService implements AuthService{
+
+    private class UserData {
+        String login;
+        String password;
+        String nickname;
+
+        public UserData(String login, String password, String nickname) {
+            this.login = login;
+            this.password = password;
+            this.nickname = nickname;
+        }
+    }
+
+    private List<SQLiteAuthService.UserData> users;
+
+    public SQLiteAuthService() {
+        users = new ArrayList<>();
+        users.add(new SQLiteAuthService.UserData("qwe", "qwe", "qwe"));
+        users.add(new SQLiteAuthService.UserData("asd", "asd", "asd"));
+        users.add(new SQLiteAuthService.UserData("zxc", "zxc", "zxc"));
+        for (int i = 1; i < 10; i++) {
+            users.add(new SQLiteAuthService.UserData("login" + i, "pass" + i, "nick" + i));
+        }
+    }
+
+    @Override
+    public String getNicknameByLoginAndPassword(String login, String password) {
+        for (SQLiteAuthService.UserData user : users) {
+            if(user.login.equals(login) && user.password.equals(password)){
+                return user.nickname;
+            }
+        }
+        return null;
+    }
+
+
+    // РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ, КОГДА ОН ВВОДИЛ ЛОГИН, ПАРОЛЬ И НИКНЕЙМ И НАЖАЛ КНОПКУ РЕГИСТРАЦИИ
+    @Override
+    public boolean registration(String login, String password, String nickname) {
+        for (SQLiteAuthService.UserData user : users) { // проходим по всему массиву зарегистрированных пользователей
+            if(user.login.equals(login) || user.nickname.equals(nickname)){ // если находит никнейм или логин, то не даст зарегаться
+                return false;
+            }
+        }
+        users.add(new SQLiteAuthService.UserData(login, password, nickname)); // если таких логина и никнейма нет еще в базе, то даем регистрировать, добавляем данные
+        return true;
+    }
+
+}
