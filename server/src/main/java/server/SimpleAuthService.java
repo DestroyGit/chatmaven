@@ -50,4 +50,9 @@ public class SimpleAuthService implements AuthService {
         users.add(new UserData(login, password, nickname)); // если таких логина и никнейма нет еще в базе, то даем регистрировать, добавляем данные
         return true;
     }
+
+    @Override
+    public String changeNickname(String login, String newNickname) {
+        return null;
+    }
 }
