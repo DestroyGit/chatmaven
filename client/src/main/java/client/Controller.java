@@ -16,12 +16,10 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -50,9 +48,13 @@ public class Controller implements Initializable {
     private Stage stage;
     private Stage regStage;
     private RegController regController;
-    
+
     private boolean authenticated;
     private String nickname;
+    private String login;
+
+    private InputStreamReader history = null;
+    private BufferedOutputStream saveHistory = null;
 
     public void setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
@@ -79,7 +81,7 @@ public class Controller implements Initializable {
             stage = (Stage) textField.getScene().getWindow();
 
             stage.setOnCloseRequest(event -> { // отключаться от сервера, если авторизован, при нажатии на крестик
-                if(socket != null && !socket.isClosed()){
+                if (socket != null && !socket.isClosed()) {
                     try {
                         out.writeUTF("/end");
                     } catch (IOException e) {
@@ -106,6 +108,7 @@ public class Controller implements Initializable {
 
                         if (str.startsWith("/regok")) {
                             regController.addMessageTextArea("Регистрация прошла успешно");
+                            createHistoryFile(); // создание файла для хранения истории
                         }
                         if (str.startsWith("/regno")) {
                             regController.addMessageTextArea("Регистрация не прошла");
@@ -118,6 +121,18 @@ public class Controller implements Initializable {
                         }
 
                         textArea.appendText(str + "\n");
+                    }
+
+                    // обращение к файлу, хранящему историю переписок, и печать на экран этой истории
+                    try {
+                        history = new InputStreamReader(new BufferedInputStream(new FileInputStream("client/src/main/resources/history/history_[" + login + "].txt")),
+                                StandardCharsets.UTF_8);
+                        int x;
+                        while ((x = history.read()) != -1) {
+                            textArea.appendText("" + (char) x);
+                        }
+                    } catch (FileNotFoundException e){
+                        e.printStackTrace();
                     }
 
                     //цикл работы
@@ -139,14 +154,23 @@ public class Controller implements Initializable {
                             }
                         } else {
                             textArea.appendText(str + "\n");
+                            saveHistory = new BufferedOutputStream(new FileOutputStream(
+                                    "client/src/main/resources/history/history_[" + login + "].txt"));
+                            saveHistory.write(textArea.getText().getBytes());
                         }
                     }
-                }catch (EOFException e){
+                } catch (EOFException e) {
                     System.out.println("Отключен по таймауту");
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     setAuthenticated(false);
+                    try {
+                        history.close();
+                        saveHistory.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     try {
                         socket.close();
                         in.close();
@@ -179,6 +203,7 @@ public class Controller implements Initializable {
         if (socket == null || socket.isClosed()) {
             connect();
         }
+        this.login = loginField.getText().trim();
 
         String msg = String.format("/auth %s %s",
                 loginField.getText().trim(), passwordField.getText().trim());
@@ -221,13 +246,23 @@ public class Controller implements Initializable {
         regStage.show(); // показать окно при нажатии на кнопку "reg"
     }
 
-    public void tryRegistration(String login, String password, String nickname){
+    public void tryRegistration(String login, String password, String nickname) {
+        this.login = login;
         String message = String.format("/reg %s %s %s", login, password, nickname);
         if (socket == null || socket.isClosed()) {
             connect();
         }
         try {
             out.writeUTF(message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // метод создания файла для хранения истории по определенному логину
+    public void createHistoryFile() {
+        try {
+            new File("client/src/main/resources/history/history_[" + login + "].txt").createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
