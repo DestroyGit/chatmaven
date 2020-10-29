@@ -5,6 +5,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler {
     DataInputStream in;
@@ -15,6 +18,8 @@ public class ClientHandler {
     private String nickname;
     private String login;
 
+    private ExecutorService service = Executors.newCachedThreadPool();
+
     public ClientHandler(Server server, Socket socket) {
         try {
             this.server = server;
@@ -23,7 +28,8 @@ public class ClientHandler {
             out = new DataOutputStream(socket.getOutputStream());
             System.out.println("Client connected " + socket.getRemoteSocketAddress());
 
-            new Thread(() -> {
+
+            service.execute(() -> {
                 try {
                     socket.setSoTimeout(120000);
                     //цикл аутентификации
@@ -127,10 +133,12 @@ public class ClientHandler {
                         e.printStackTrace();
                     }
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            service.shutdown();
         }
     }
 

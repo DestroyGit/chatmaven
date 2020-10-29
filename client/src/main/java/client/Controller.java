@@ -25,6 +25,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Controller implements Initializable {
     @FXML
@@ -59,6 +61,8 @@ public class Controller implements Initializable {
 
     private InputStreamReader history = null;
     private FileOutputStream saveHistory = null;
+
+    private ExecutorService service = Executors.newCachedThreadPool();
 
 
     public void setAuthenticated(boolean authenticated) {
@@ -105,7 +109,7 @@ public class Controller implements Initializable {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-            new Thread(() -> {
+            service.execute(() -> {
                 try {
                     //цикл аутентификации
                     while (true) {
@@ -166,7 +170,6 @@ public class Controller implements Initializable {
                 } finally {
                     setAuthenticated(false);
                     try {
-                        history.close();
                         saveHistory.close();
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -179,10 +182,12 @@ public class Controller implements Initializable {
                         e.printStackTrace();
                     }
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            service.shutdown();
         }
     }
 
@@ -263,6 +268,8 @@ public class Controller implements Initializable {
         return "history/history_[" + login + "].txt";
     }
 
+
+    // метод возврата последних 100 строк истории сообщений
     private String  return100rollsOfHistory(String login) throws IOException {
         if (!Files.exists(Paths.get(linkHistory(login)))){
             return "";
@@ -270,8 +277,8 @@ public class Controller implements Initializable {
         StringBuilder sb = new StringBuilder();
         List<String> historyLines = Files.readAllLines(Paths.get(linkHistory(login)));
         int start = 0;
-        if (historyLines.size() > 5){
-            start = historyLines.size() - 5;
+        if (historyLines.size() > 100){
+            start = historyLines.size() - 100;
         }
         for (int i = start; i < historyLines.size(); i++) {
             sb.append(historyLines.get(i)).append(System.lineSeparator());
