@@ -20,6 +20,10 @@ import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -54,7 +58,8 @@ public class Controller implements Initializable {
     private String login;
 
     private InputStreamReader history = null;
-    private BufferedOutputStream saveHistory = null;
+    private FileOutputStream saveHistory = null;
+
 
     public void setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
@@ -108,7 +113,6 @@ public class Controller implements Initializable {
 
                         if (str.startsWith("/regok")) {
                             regController.addMessageTextArea("Регистрация прошла успешно");
-                            createHistoryFile(); // создание файла для хранения истории
                         }
                         if (str.startsWith("/regno")) {
                             regController.addMessageTextArea("Регистрация не прошла");
@@ -124,18 +128,15 @@ public class Controller implements Initializable {
                     }
 
                     // обращение к файлу, хранящему историю переписок, и печать на экран этой истории
+                    saveHistory = new FileOutputStream(linkHistory(login), true);
                     try {
-                        history = new InputStreamReader(new BufferedInputStream(new FileInputStream("client/src/main/resources/history/history_[" + login + "].txt")),
-                                StandardCharsets.UTF_8);
-                        int x;
-                        while ((x = history.read()) != -1) {
-                            textArea.appendText("" + (char) x);
-                        }
+                        textArea.appendText(return100rollsOfHistory(login));
                     } catch (FileNotFoundException e){
                         e.printStackTrace();
                     }
 
                     //цикл работы
+
                     while (true) {
                         String str = in.readUTF();
                         if (str.startsWith("/")) {
@@ -154,9 +155,8 @@ public class Controller implements Initializable {
                             }
                         } else {
                             textArea.appendText(str + "\n");
-                            saveHistory = new BufferedOutputStream(new FileOutputStream(
-                                    "client/src/main/resources/history/history_[" + login + "].txt"));
-                            saveHistory.write(textArea.getText().getBytes());
+                            saveHistory.write(str.getBytes());
+                            saveHistory.write("\n".getBytes());
                         }
                     }
                 } catch (EOFException e) {
@@ -259,13 +259,24 @@ public class Controller implements Initializable {
         }
     }
 
-    // метод создания файла для хранения истории по определенному логину
-    public void createHistoryFile() {
-        try {
-            new File("client/src/main/resources/history/history_[" + login + "].txt").createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+    private String linkHistory(String login){
+        return "history/history_[" + login + "].txt";
+    }
+
+    private String  return100rollsOfHistory(String login) throws IOException {
+        if (!Files.exists(Paths.get(linkHistory(login)))){
+            return "";
         }
+        StringBuilder sb = new StringBuilder();
+        List<String> historyLines = Files.readAllLines(Paths.get(linkHistory(login)));
+        int start = 0;
+        if (historyLines.size() > 5){
+            start = historyLines.size() - 5;
+        }
+        for (int i = start; i < historyLines.size(); i++) {
+            sb.append(historyLines.get(i)).append(System.lineSeparator());
+        }
+        return sb.toString();
     }
 
 
