@@ -2,14 +2,18 @@ package server;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class ClientHandler {
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
     DataInputStream in;
     DataOutputStream out;
     Server server;
@@ -21,12 +25,18 @@ public class ClientHandler {
     private ExecutorService service = Executors.newCachedThreadPool();
 
     public ClientHandler(Server server, Socket socket) {
+        LogManager manager = LogManager.getLogManager();
+        try {
+            manager.readConfiguration(new FileInputStream("logging.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         try {
             this.server = server;
             this.socket = socket;
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-            System.out.println("Client connected " + socket.getRemoteSocketAddress());
+            logger.severe("Client connected " + socket.getRemoteSocketAddress());
 
 
             service.execute(() -> {
@@ -70,6 +80,7 @@ public class ClientHandler {
                                 }
 
                             } else {
+                                logger.info("Пользователь login " + login + " ввел неверный логин или пароль");
                                 sendMsg("Неверный логин / пароль\n");
                             }
                         }
@@ -118,18 +129,19 @@ public class ClientHandler {
                 }
                 catch (SocketTimeoutException e){
                     sendMsg("/end");
-                    System.out.println("Отключен по таймауту");
+                    logger.severe("Пользователь отключен по таймауту " + socket.getRemoteSocketAddress());
                 }
                 catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     server.unsubscribe(this);
-                    System.out.println("Client disconnected " + socket.getRemoteSocketAddress());
+                    logger.severe("Client disconnected " + socket.getRemoteSocketAddress());
                     try {
                         socket.close();
                         in.close();
                         out.close();
                     } catch (IOException e) {
+                        logger.warning("Ошибка закрытия сокета");
                         e.printStackTrace();
                     }
                 }

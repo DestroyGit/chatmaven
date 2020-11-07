@@ -1,10 +1,15 @@
 package server;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class SQLiteAuthService implements AuthService{
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
     private static Connection connection;
     private static Statement stmt;
     private static PreparedStatement psInsert;
@@ -15,10 +20,16 @@ public class SQLiteAuthService implements AuthService{
 
     @Override
     public String getNicknameByLoginAndPassword(String login, String password) {
+        LogManager manager = LogManager.getLogManager();
+        try {
+            manager.readConfiguration(new FileInputStream("logging.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         String nickname;
         try {
             connect();
-            System.out.println("DB connect");
             ResultSet rs = stmt.executeQuery("SELECT login, password, nickname FROM chatusers");
             while (rs.next()) {
                 if (rs.getString(1).equals(login) && rs.getString(2).equals(password)) {
@@ -55,10 +66,8 @@ public class SQLiteAuthService implements AuthService{
             psInsert.setString(3, nickname);
             psInsert.executeUpdate();
             rs.close();
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
         } finally {
             disconnect();
         }
@@ -92,17 +101,22 @@ public class SQLiteAuthService implements AuthService{
         Class.forName("org.sqlite.JDBC");
         connection = DriverManager.getConnection("jdbc:sqlite:main.db");
         stmt = connection.createStatement();
+        logger.info("DB connected");
     }
 
     public static void disconnect() {
         try {
             stmt.close();
+            logger.info("Statement отключен");
         } catch (SQLException throwables) {
+            logger.warning("### Ошибка отключения Statement ###");
             throwables.printStackTrace();
         }
         try {
             connection.close();
+            logger.info("DB disconnected");
         } catch (SQLException throwables) {
+            logger.warning("### Ошибка отключения базы данных ###");
             throwables.printStackTrace();
         }
 
