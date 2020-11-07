@@ -1,12 +1,16 @@
 package server;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.*;
 
 public class Server {
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
+
     private List<ClientHandler> clients;
     private AuthService authService;
 
@@ -16,10 +20,16 @@ public class Server {
         ServerSocket server = null;
         Socket socket = null;
         final int PORT = 8189;
+        LogManager manager = LogManager.getLogManager();
+        try {
+            manager.readConfiguration(new FileInputStream("logging.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         try {
             server = new ServerSocket(PORT);
-            System.out.println("Server started");
+            logger.info("Server started");
 
             while (true) {
                 socket = server.accept();
@@ -27,16 +37,19 @@ public class Server {
             }
 
         } catch (IOException e) {
+            logger.warning("### Сервер не начал работу ###");
             e.printStackTrace();
         } finally {
             try {
                 socket.close();
             } catch (IOException e) {
+                logger.warning("### Не закрылся socket ###");
                 e.printStackTrace();
             }
             try {
                 server.close();
             } catch (IOException e) {
+                logger.warning("### Не закрылся server ###");
                 e.printStackTrace();
             }
         }
@@ -47,6 +60,7 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(message);
         }
+        logger.fine(message);
     }
 
     // МЕТОД ПРИВАТНОГО СООБЩЕНИЯ
@@ -62,6 +76,7 @@ public class Server {
             }
         }
         sender.sendMsg(String.format("Server: client %s is not found", reciever)); // если такой отправитель не найден, отправляем сообщение отправителю
+        logger.fine(message);
     }
 
     public void serverMessage(ClientHandler sender, String msg, String newNick){
@@ -70,10 +85,12 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(message);
         }
+        logger.fine("Server message: " + message);
     }
 
     public void serverMessage(ClientHandler sender, String msg) {
         sender.sendMsg(msg);
+        logger.fine("Server message: " + msg);
     }
 
     public void subscribe(ClientHandler clientHandler) {
@@ -93,9 +110,11 @@ public class Server {
     public boolean isLoginAuthenticated(String login){
         for (ClientHandler c : clients) {
             if (c.getLogin().equals(login)){
+                logger.info(login + " не прошел аутентификацию");
                 return true;
             }
         }
+        logger.info(login + " прошел аутентификацию");
         return false;
     }
 
@@ -110,5 +129,6 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(message); // отправляем сообщение
         }
+        logger.info("Создан clientlist");
     }
 }
